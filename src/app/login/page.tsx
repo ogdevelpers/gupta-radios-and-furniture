@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import { LoginForm } from "@/components/LoginForm";
 import { getStaffSession } from "@/lib/auth/session";
 
+export const runtime = "edge";
+
 export default async function LoginPage() {
   const staff = await getStaffSession();
   if (staff) {

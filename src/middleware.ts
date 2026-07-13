@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 const STAFF_SESSION_COOKIE = "grf_staff_session";
 
-export async function proxy(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const hasSession = Boolean(request.cookies.get(STAFF_SESSION_COOKIE)?.value);
 

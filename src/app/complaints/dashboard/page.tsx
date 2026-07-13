@@ -4,6 +4,8 @@ import { getStaffSession } from "@/lib/auth/session";
 import { createServiceClient } from "@/lib/supabase/service";
 import type { Complaint, ComplaintStats } from "@/types/complaint";
 
+export const runtime = "edge";
+
 export default async function ComplaintsDashboardPage() {
   const staff = await getStaffSession();
   if (!staff) {
