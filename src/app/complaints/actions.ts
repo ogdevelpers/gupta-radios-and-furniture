@@ -14,6 +14,61 @@ export type ActionResult = {
   success?: boolean;
 };
 
+const INVOICE_BUCKET = "invoices";
+const MAX_INVOICE_BYTES = 5 * 1024 * 1024;
+const ALLOWED_INVOICE_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/heic",
+  "application/pdf",
+]);
+
+function sanitizeFileName(name: string) {
+  const cleaned = name.replace(/[^a-zA-Z0-9._-]/g, "_").replace(/_+/g, "_");
+  return cleaned.slice(0, 120) || "invoice";
+}
+
+async function uploadInvoice(
+  supabase: ReturnType<typeof createServiceClient>,
+  file: File,
+): Promise<{ url?: string; error?: string }> {
+  if (!ALLOWED_INVOICE_TYPES.has(file.type)) {
+    return {
+      error: "Invoice must be a JPEG, PNG, WebP, HEIC, or PDF file.",
+    };
+  }
+
+  if (file.size > MAX_INVOICE_BYTES) {
+    return { error: "Invoice file must be 5 MB or smaller." };
+  }
+
+  const path = `${crypto.randomUUID()}/${sanitizeFileName(file.name)}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from(INVOICE_BUCKET)
+    .upload(path, file, {
+      contentType: file.type,
+      upsert: false,
+    });
+
+  if (uploadError) {
+    if (
+      uploadError.message.toLowerCase().includes("bucket") ||
+      uploadError.message.toLowerCase().includes("not found")
+    ) {
+      return {
+        error:
+          "Invoice storage is not set up. Run supabase/add-invoice-upload.sql in the Supabase SQL Editor.",
+      };
+    }
+    return { error: uploadError.message };
+  }
+
+  const { data } = supabase.storage.from(INVOICE_BUCKET).getPublicUrl(path);
+  return { url: data.publicUrl };
+}
+
 export async function loginStaff(
   _prev: ActionResult,
   formData: FormData,
@@ -87,6 +142,12 @@ export async function registerComplaint(
     return { error: "Please fill in all required fields." };
   }
 
+  const invoiceEntry = formData.get("invoice");
+  const invoiceFile =
+    invoiceEntry instanceof File && invoiceEntry.size > 0
+      ? invoiceEntry
+      : null;
+
   const supabase = createServiceClient();
 
   // Confirm staff still exists in logins before insert (avoids FK errors)
@@ -101,6 +162,14 @@ export async function registerComplaint(
     return { error: "Your session is invalid. Please sign in again." };
   }
 
+  if (invoiceFile) {
+    const uploaded = await uploadInvoice(supabase, invoiceFile);
+    if (uploaded.error) {
+      return { error: uploaded.error };
+    }
+    payload.invoice_url = uploaded.url ?? null;
+  }
+
   const { error } = await supabase.from("complaints").insert(payload);
 
   if (error) {
@@ -108,6 +177,12 @@ export async function registerComplaint(
       return {
         error:
           "Database setup issue: run supabase/fix-created-by-fk.sql in the Supabase SQL Editor.",
+      };
+    }
+    if (error.message.includes("invoice_url")) {
+      return {
+        error:
+          "Database setup issue: run supabase/add-invoice-upload.sql in the Supabase SQL Editor.",
       };
     }
     return { error: error.message };

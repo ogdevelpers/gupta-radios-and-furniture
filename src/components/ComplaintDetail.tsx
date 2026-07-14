@@ -104,6 +104,24 @@ export function ComplaintDetail({
             <dd>{complaint.issue_message || "—"}</dd>
           </div>
 
+          <div className="detail-item detail-item-full">
+            <dt>Invoice</dt>
+            <dd>
+              {complaint.invoice_url ? (
+                <a
+                  href={complaint.invoice_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="detail-link"
+                >
+                  View uploaded invoice
+                </a>
+              ) : (
+                "—"
+              )}
+            </dd>
+          </div>
+
           <div className="detail-item">
             <dt>Warranty</dt>
             <dd>

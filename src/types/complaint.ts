@@ -9,6 +9,7 @@ export type Complaint = {
   address: string;
   product_serial_number: string;
   issue_message: string;
+  invoice_url: string | null;
   warranty_status: WarrantyStatus;
   status: ComplaintStatus;
   created_by: string | null;
@@ -23,6 +24,7 @@ export type ComplaintInsert = {
   address: string;
   product_serial_number: string;
   issue_message: string;
+  invoice_url?: string | null;
   warranty_status: WarrantyStatus;
   created_by: string;
 };

@@ -94,6 +94,16 @@ function ComplaintFormInner({ onClose }: { onClose: () => void }) {
         />
       </label>
 
+      <label className="field field-full">
+        <span>Invoice upload</span>
+        <input
+          type="file"
+          name="invoice"
+          accept="image/jpeg,image/png,image/webp,image/heic,application/pdf,.pdf,.jpg,.jpeg,.png,.webp,.heic"
+        />
+        <span className="field-hint">Optional. PDF or image, up to 5 MB.</span>
+      </label>
+
       {state.error ? (
         <p className="form-error field-full" role="alert">
           {state.error}

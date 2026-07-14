@@ -34,6 +34,7 @@ create table if not exists public.complaints (
   address text not null,
   product_serial_number text not null,
   issue_message text not null default '',
+  invoice_url text,
   warranty_status text not null check (warranty_status in ('in_warranty', 'out_warranty')),
   status text not null default 'pending' check (status in ('pending', 'resolved')),
   created_by uuid references public.logins (id) on delete set null,
@@ -41,9 +42,12 @@ create table if not exists public.complaints (
   updated_at timestamptz not null default now()
 );
 
--- Add issue_message if the table already existed without it
+-- Add columns if the table already existed without them
 alter table public.complaints
   add column if not exists issue_message text not null default '';
+
+alter table public.complaints
+  add column if not exists invoice_url text;
 
 -- Ensure created_by always references public.logins (not auth.users)
 update public.complaints c
@@ -87,3 +91,23 @@ create trigger complaints_set_updated_at
   before update on public.complaints
   for each row
   execute function public.set_complaints_updated_at();
+
+-- Invoice file uploads (public so staff can open links from the dashboard)
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
+  'invoices',
+  'invoices',
+  true,
+  5242880,
+  array[
+    'image/jpeg',
+    'image/png',
+    'image/webp',
+    'image/heic',
+    'application/pdf'
+  ]
+)
+on conflict (id) do update set
+  public = excluded.public,
+  file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;
